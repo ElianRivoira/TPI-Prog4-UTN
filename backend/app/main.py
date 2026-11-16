@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import create_all_tables
+from app.db import models as _models  # noqa: F401  (registra las tablas antes de crearlas)
 
 
 @asynccontextmanager
