@@ -1,7 +1,11 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from app.modules.pedidos.models import Pedido
 
 
 class Usuario(SQLModel, table=True):
@@ -20,3 +24,5 @@ class Usuario(SQLModel, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         sa_type=DateTime(timezone=True),
     )
+
+    pedidos: list["Pedido"] = Relationship(back_populates="usuario")
