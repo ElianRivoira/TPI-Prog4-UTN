@@ -1,0 +1,20 @@
+# Opcional: levanta un PostgreSQL local con `docker compose up -d`.
+# Las credenciales coinciden con el DATABASE_URL de .env.example (solo desarrollo).
+# Nombre de proyecto fijo: sin él, Docker usa el nombre de la carpeta ("backend") y puede
+# reutilizar el volumen de otro proyecto con la misma carpeta, donde no existe foodstore_db.
+name: tpi-food-store
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: foodstore_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
