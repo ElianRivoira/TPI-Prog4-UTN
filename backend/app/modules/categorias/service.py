@@ -1,4 +1,5 @@
 from app.modules.categorias.models import Categoria
+from app.modules.categorias.repository import CategoriaRepository
 from app.modules.categorias.schemas import CategoriaCreate, CategoriaRead, CategoriaUpdate
 from app.modules.categorias.unit_of_work import CategoriaUnitOfWork
 
@@ -15,9 +16,9 @@ class NombreDuplicado(Exception):
         super().__init__(f"Ya existe una categoría con el nombre '{nombre}'")
 
 
-def obtener_categoria_activa(uow: CategoriaUnitOfWork, categoria_id: int) -> Categoria:
-    """Una categoría dada de baja se trata como inexistente."""
-    categoria = uow.categorias.get_by_id(categoria_id)
+def obtener_categoria_activa(categorias: CategoriaRepository, categoria_id: int) -> Categoria:
+    """Una categoría dada de baja se trata como inexistente. También la usa el módulo productos."""
+    categoria = categorias.get_by_id(categoria_id)
     if categoria is None or not categoria.activo:
         raise CategoriaNoEncontrada(categoria_id)
     return categoria
@@ -33,7 +34,7 @@ class CategoriaService:
 
     def obtener(self, categoria_id: int) -> CategoriaRead:
         with self.uow as uow:
-            return CategoriaRead.model_validate(obtener_categoria_activa(uow, categoria_id))
+            return CategoriaRead.model_validate(obtener_categoria_activa(uow.categorias, categoria_id))
 
     def crear(self, data: CategoriaCreate) -> CategoriaRead:
         with self.uow as uow:
@@ -45,7 +46,7 @@ class CategoriaService:
 
     def actualizar(self, categoria_id: int, data: CategoriaUpdate) -> CategoriaRead:
         with self.uow as uow:
-            categoria = obtener_categoria_activa(uow, categoria_id)
+            categoria = obtener_categoria_activa(uow.categorias, categoria_id)
             cambios = data.model_dump(exclude_unset=True, exclude_none=True)
 
             if "nombre" in cambios:
@@ -60,6 +61,6 @@ class CategoriaService:
     def eliminar(self, categoria_id: int) -> None:
         """Baja lógica. No libera el nombre ni da de baja los productos de la categoría."""
         with self.uow as uow:
-            categoria = obtener_categoria_activa(uow, categoria_id)
+            categoria = obtener_categoria_activa(uow.categorias, categoria_id)
             categoria.activo = False
             uow.categorias.add(categoria)
