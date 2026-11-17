@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import create_all_tables
 from app.db import models as _models  # noqa: F401  (registra las tablas antes de crearlas)
+from app.modules.categorias.router import router as categorias_router
 
 
 @asynccontextmanager
@@ -34,5 +35,6 @@ app.add_middleware(
 
 # Todos los endpoints de la API cuelgan de /api/v1
 api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(categorias_router)
 
 app.include_router(api_router)
