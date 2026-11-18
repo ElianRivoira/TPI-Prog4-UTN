@@ -48,6 +48,11 @@ class TransicionInvalida(ReglaDeNegocio):
         super().__init__(mensaje)
 
 
+class PedidoNoCancelable(ReglaDeNegocio):
+    def __init__(self, actual: str) -> None:
+        super().__init__(f"Solo se puede cancelar un pedido PENDIENTE (estado actual: {actual})")
+
+
 # --- Máquina de estados (RN-02): estado actual -> estados a los que puede pasar ---
 TRANSICIONES: dict[EstadoPedido, set[EstadoPedido]] = {
     EstadoPedido.PENDIENTE: {EstadoPedido.EN_PREPARACION, EstadoPedido.CANCELADO},
@@ -122,6 +127,16 @@ class PedidoService:
         with self.uow as uow:
             pedido = _obtener_para_modificar(uow, pedido_id)
             return _aplicar_transicion(uow, pedido, nuevo)
+
+    def cancelar_propio(self, pedido_id: int, usuario: UserPublic) -> PedidoRead:
+        """El cliente cancela su propio pedido, solo mientras está PENDIENTE (RN-03, RN-04)."""
+        with self.uow as uow:
+            pedido = _obtener_para_modificar(uow, pedido_id)
+            if pedido.usuario_id != usuario.id:
+                raise PedidoAjeno()
+            if pedido.estado != EstadoPedido.PENDIENTE:
+                raise PedidoNoCancelable(pedido.estado)
+            return _aplicar_transicion(uow, pedido, EstadoPedido.CANCELADO)
 
     def crear(self, usuario_id: int, data: PedidoCreate) -> PedidoRead:
         """RN-01: crea el pedido completo o no crea nada.

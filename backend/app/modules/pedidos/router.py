@@ -78,3 +78,19 @@ def cambiar_estado(pedido_id: int, data: CambioEstado, service: ServiceDep) -> P
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except ReglaDeNegocio as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.patch(
+    "/{pedido_id}/cancelar",
+    response_model=PedidoRead,
+    summary="El dueño cancela su pedido PENDIENTE y se restituye el stock (RN-03, RN-04)",
+)
+def cancelar_pedido(pedido_id: int, usuario: CurrentUser, service: ServiceDep) -> PedidoRead:
+    try:
+        return service.cancelar_propio(pedido_id, usuario)
+    except PedidoNoEncontrado as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PedidoAjeno as e:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ReglaDeNegocio as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
