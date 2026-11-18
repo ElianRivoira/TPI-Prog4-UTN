@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.deps import require_admin
 from app.modules.categorias.schemas import CategoriaCreate, CategoriaRead, CategoriaUpdate
 from app.modules.categorias.service import CategoriaNoEncontrada, CategoriaService, NombreDuplicado
 from app.modules.categorias.unit_of_work import CategoriaUnitOfWork
@@ -34,6 +35,7 @@ def obtener_categoria(categoria_id: int, service: ServiceDep) -> CategoriaRead:
     response_model=CategoriaRead,
     status_code=status.HTTP_201_CREATED,
     summary="Crea una categoría (nombre único)",
+    dependencies=[Depends(require_admin)],
 )
 def crear_categoria(data: CategoriaCreate, service: ServiceDep) -> CategoriaRead:
     try:
@@ -42,7 +44,12 @@ def crear_categoria(data: CategoriaCreate, service: ServiceDep) -> CategoriaRead
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
 
 
-@router.put("/{categoria_id}", response_model=CategoriaRead, summary="Actualiza los campos enviados")
+@router.put(
+    "/{categoria_id}",
+    response_model=CategoriaRead,
+    summary="Actualiza los campos enviados",
+    dependencies=[Depends(require_admin)],
+)
 def actualizar_categoria(
     categoria_id: int, data: CategoriaUpdate, service: ServiceDep
 ) -> CategoriaRead:
@@ -58,6 +65,7 @@ def actualizar_categoria(
     "/{categoria_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Baja lógica de una categoría",
+    dependencies=[Depends(require_admin)],
 )
 def eliminar_categoria(categoria_id: int, service: ServiceDep) -> None:
     try:
