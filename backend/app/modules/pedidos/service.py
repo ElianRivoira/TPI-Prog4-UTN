@@ -1,10 +1,21 @@
 from app.modules.pedidos.models import DetallePedido, Pedido
-from app.modules.pedidos.schemas import EstadoPedido, PedidoCreate, PedidoRead
+from app.modules.pedidos.schemas import EstadoPedido, PedidoCreate, PedidoRead, PedidosPaginados
 from app.modules.pedidos.unit_of_work import PedidoUnitOfWork
 from app.modules.productos.service import ProductoNoEncontrado
+from app.modules.usuarios.schemas import UserPublic
 
 # --- Excepciones de dominio (el Router las traduce a códigos HTTP) ---
 # Si un producto no existe o está dado de baja se lanza ProductoNoEncontrado (módulo productos): 404.
+
+
+class PedidoNoEncontrado(Exception):
+    def __init__(self, pedido_id: int) -> None:
+        super().__init__(f"El pedido {pedido_id} no existe")
+
+
+class PedidoAjeno(Exception):
+    def __init__(self) -> None:
+        super().__init__("El pedido pertenece a otro usuario")
 
 
 class ReglaDeNegocio(Exception):
@@ -26,9 +37,39 @@ class StockInsuficiente(ReglaDeNegocio):
         super().__init__(f"Stock insuficiente para '{nombre}' (disponible: {disponible})")
 
 
+def _es_admin(usuario: UserPublic) -> bool:
+    return usuario.role == "admin"
+
+
+def _verificar_acceso(pedido: Pedido, usuario: UserPublic) -> None:
+    """RN-04: el cliente solo accede a sus pedidos; el admin, a todos."""
+    if not _es_admin(usuario) and pedido.usuario_id != usuario.id:
+        raise PedidoAjeno()
+
+
 class PedidoService:
     def __init__(self, uow: PedidoUnitOfWork) -> None:
         self.uow = uow
+
+    def listar(
+        self, usuario: UserPublic, *, skip: int, limit: int, estado: EstadoPedido | None
+    ) -> PedidosPaginados:
+        """El admin ve todos los pedidos; el cliente, solo los propios."""
+        with self.uow as uow:
+            pedidos, total = uow.pedidos.list_by_usuario(
+                None if _es_admin(usuario) else usuario.id, skip=skip, limit=limit, estado=estado
+            )
+            return PedidosPaginados(
+                total=total, items=[PedidoRead.model_validate(p) for p in pedidos]
+            )
+
+    def obtener(self, pedido_id: int, usuario: UserPublic) -> PedidoRead:
+        with self.uow as uow:
+            pedido = uow.pedidos.get_by_id(pedido_id)
+            if pedido is None:
+                raise PedidoNoEncontrado(pedido_id)
+            _verificar_acceso(pedido, usuario)
+            return PedidoRead.model_validate(pedido)
 
     def crear(self, usuario_id: int, data: PedidoCreate) -> PedidoRead:
         """RN-01: crea el pedido completo o no crea nada.
