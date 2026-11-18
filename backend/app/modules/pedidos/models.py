@@ -32,7 +32,10 @@ class Pedido(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_ahora, sa_type=DateTime(timezone=True))
 
     usuario: "Usuario" = Relationship(back_populates="pedidos")
-    items: list["DetallePedido"] = Relationship(back_populates="pedido")
+    # Las líneas se devuelven en el orden en que se cargaron
+    items: list["DetallePedido"] = Relationship(
+        back_populates="pedido", sa_relationship_kwargs={"order_by": "DetallePedido.id"}
+    )
 
 
 class DetallePedido(SQLModel, table=True):
