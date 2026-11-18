@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import create_all_tables
 from app.db import models as _models  # noqa: F401  (registra las tablas antes de crearlas)
+from app.modules.auth.router import router as auth_router
 from app.modules.categorias.router import router as categorias_router
 from app.modules.productos.router import router as productos_router
 
@@ -36,6 +37,7 @@ app.add_middleware(
 
 # Todos los endpoints de la API cuelgan de /api/v1
 api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(auth_router)
 api_router.include_router(categorias_router)
 api_router.include_router(productos_router)
 
