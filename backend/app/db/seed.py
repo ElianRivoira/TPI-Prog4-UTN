@@ -4,10 +4,21 @@ Uso (desde backend/):  python -m app.db.seed
 """
 
 from app.core.database import create_all_tables
+from app.core.security import hash_password
 from app.db import models as _models  # noqa: F401  (registra las tablas antes de crearlas)
 from app.modules.categorias.models import Categoria
 from app.modules.productos.models import Producto
 from app.modules.productos.unit_of_work import ProductoUnitOfWork
+from app.modules.usuarios.models import Usuario
+from app.modules.usuarios.unit_of_work import UsuarioUnitOfWork
+
+# Usuario administrador inicial (credenciales de desarrollo documentadas en el README)
+ADMIN = {
+    "username": "admin",
+    "full_name": "Administrador",
+    "email": "admin@foodstore.com",
+    "password": "Admin1234!",
+}
 
 CATEGORIAS: list[dict[str, str]] = [
     {"nombre": "Pizzas", "descripcion": "Pizzas a la piedra"},
@@ -35,6 +46,21 @@ PRODUCTOS: list[tuple[str, str, str, float, int]] = [
 def seed() -> None:
     create_all_tables()
     categorias_creadas = productos_creados = 0
+    admin_creado = False
+
+    with UsuarioUnitOfWork() as uow:
+        # Si el admin ya existe no se modifica (tampoco su contraseña)
+        if uow.usuarios.get_by_username(ADMIN["username"]) is None:
+            uow.usuarios.add(
+                Usuario(
+                    username=ADMIN["username"],
+                    full_name=ADMIN["full_name"],
+                    email=ADMIN["email"],
+                    hashed_password=hash_password(ADMIN["password"]),
+                    role="admin",
+                )
+            )
+            admin_creado = True
 
     with ProductoUnitOfWork() as uow:
         categorias: dict[str, Categoria] = {}
@@ -58,7 +84,10 @@ def seed() -> None:
                 )
                 productos_creados += 1
 
-    print(f"Seed completo: {categorias_creadas} categorías y {productos_creados} productos nuevos.")
+    print(
+        f"Seed completo: admin {'creado' if admin_creado else 'ya existente'}, "
+        f"{categorias_creadas} categorías y {productos_creados} productos nuevos."
+    )
 
 
 if __name__ == "__main__":
