@@ -1,7 +1,13 @@
 from datetime import datetime, timezone
 
 from app.modules.pedidos.models import DetallePedido, Pedido
-from app.modules.pedidos.schemas import EstadoPedido, PedidoCreate, PedidoRead, PedidosPaginados
+from app.modules.pedidos.schemas import (
+    EstadoPedido,
+    PedidoCreate,
+    PedidoRead,
+    PedidosPaginados,
+    ResumenPedidos,
+)
 from app.modules.pedidos.unit_of_work import PedidoUnitOfWork
 from app.modules.productos.service import ProductoNoEncontrado
 from app.modules.usuarios.schemas import UserPublic
@@ -137,6 +143,23 @@ class PedidoService:
             if pedido.estado != EstadoPedido.PENDIENTE:
                 raise PedidoNoCancelable(pedido.estado)
             return _aplicar_transicion(uow, pedido, EstadoPedido.CANCELADO)
+
+    def resumen(self) -> ResumenPedidos:
+        """Indicadores del panel de administración."""
+        # "Hoy" según la zona horaria del servidor: desde las 00:00 locales
+        inicio_del_dia = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+        with self.uow as uow:
+            por_estado = uow.pedidos.count_by_estado()
+            return ResumenPedidos(
+                pendientes=por_estado.get(EstadoPedido.PENDIENTE, 0),
+                en_preparacion=por_estado.get(EstadoPedido.EN_PREPARACION, 0),
+                entregados=por_estado.get(EstadoPedido.ENTREGADO, 0),
+                cancelados=por_estado.get(EstadoPedido.CANCELADO, 0),
+                pedidos_hoy=uow.pedidos.count_creados_desde(inicio_del_dia),
+                ingresos_entregados=round(
+                    uow.pedidos.sum_total_por_estado(EstadoPedido.ENTREGADO), 2
+                ),
+            )
 
     def crear(self, usuario_id: int, data: PedidoCreate) -> PedidoRead:
         """RN-01: crea el pedido completo o no crea nada.

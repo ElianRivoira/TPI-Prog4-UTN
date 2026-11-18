@@ -9,6 +9,7 @@ from app.modules.pedidos.schemas import (
     PedidoCreate,
     PedidoRead,
     PedidosPaginados,
+    ResumenPedidos,
 )
 from app.modules.pedidos.service import (
     PedidoAjeno,
@@ -53,6 +54,17 @@ def listar_pedidos(
     estado: EstadoPedido | None = None,
 ) -> PedidosPaginados:
     return service.listar(usuario, skip=skip, limit=limit, estado=estado)
+
+
+# Se declara antes de /{pedido_id}: si no, FastAPI intentaría interpretar "resumen" como un id
+@router.get(
+    "/resumen",
+    response_model=ResumenPedidos,
+    summary="Indicadores del panel de administración",
+    dependencies=[Depends(require_admin)],
+)
+def resumen_pedidos(service: ServiceDep) -> ResumenPedidos:
+    return service.resumen()
 
 
 @router.get("/{pedido_id}", response_model=PedidoRead, summary="Detalle con sus líneas (dueño o admin)")
