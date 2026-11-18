@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, gt=0)
     FRONTEND_ORIGIN: str = "http://localhost:5173"
+    # Cookie de sesión solo por HTTPS. False en desarrollo local (http://localhost)
+    COOKIE_SECURE: bool = False
 
 
 settings = Settings()
