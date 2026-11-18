@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.modules.pedidos.models import DetallePedido, Pedido
 from app.modules.pedidos.schemas import EstadoPedido, PedidoCreate, PedidoRead, PedidosPaginados
 from app.modules.pedidos.unit_of_work import PedidoUnitOfWork
@@ -37,6 +39,24 @@ class StockInsuficiente(ReglaDeNegocio):
         super().__init__(f"Stock insuficiente para '{nombre}' (disponible: {disponible})")
 
 
+class TransicionInvalida(ReglaDeNegocio):
+    def __init__(self, actual: str, nuevo: str) -> None:
+        if not TRANSICIONES[EstadoPedido(actual)]:
+            mensaje = f"El pedido está {actual}: no admite cambios de estado"
+        else:
+            mensaje = f"No se puede pasar un pedido de {actual} a {nuevo}"
+        super().__init__(mensaje)
+
+
+# --- Máquina de estados (RN-02): estado actual -> estados a los que puede pasar ---
+TRANSICIONES: dict[EstadoPedido, set[EstadoPedido]] = {
+    EstadoPedido.PENDIENTE: {EstadoPedido.EN_PREPARACION, EstadoPedido.CANCELADO},
+    EstadoPedido.EN_PREPARACION: {EstadoPedido.ENTREGADO, EstadoPedido.CANCELADO},
+    EstadoPedido.ENTREGADO: set(),  # terminal
+    EstadoPedido.CANCELADO: set(),  # terminal
+}
+
+
 def _es_admin(usuario: UserPublic) -> bool:
     return usuario.role == "admin"
 
@@ -45,6 +65,32 @@ def _verificar_acceso(pedido: Pedido, usuario: UserPublic) -> None:
     """RN-04: el cliente solo accede a sus pedidos; el admin, a todos."""
     if not _es_admin(usuario) and pedido.usuario_id != usuario.id:
         raise PedidoAjeno()
+
+
+def _obtener_para_modificar(uow: PedidoUnitOfWork, pedido_id: int) -> Pedido:
+    pedido = uow.pedidos.get_for_update(pedido_id)
+    if pedido is None:
+        raise PedidoNoEncontrado(pedido_id)
+    return pedido
+
+
+def _aplicar_transicion(uow: PedidoUnitOfWork, pedido: Pedido, nuevo: EstadoPedido) -> PedidoRead:
+    """Valida la transición antes de modificar el pedido (RN-02). Si el nuevo estado es CANCELADO,
+    restituye el stock de cada línea en la misma transacción (RN-03)."""
+    if nuevo not in TRANSICIONES[EstadoPedido(pedido.estado)]:
+        raise TransicionInvalida(pedido.estado, nuevo)
+
+    if nuevo == EstadoPedido.CANCELADO:
+        uow.productos.lock_by_ids([detalle.producto_id for detalle in pedido.items])
+        for detalle in pedido.items:
+            producto = uow.productos.get_by_id(detalle.producto_id)
+            # El producto puede estar dado de baja: su stock se restituye igual
+            if producto is not None:
+                producto.stock += detalle.cantidad
+
+    pedido.estado = nuevo
+    pedido.updated_at = datetime.now(timezone.utc)
+    return PedidoRead.model_validate(uow.pedidos.add(pedido))
 
 
 class PedidoService:
@@ -70,6 +116,12 @@ class PedidoService:
                 raise PedidoNoEncontrado(pedido_id)
             _verificar_acceso(pedido, usuario)
             return PedidoRead.model_validate(pedido)
+
+    def cambiar_estado(self, pedido_id: int, nuevo: EstadoPedido) -> PedidoRead:
+        """El admin avanza o cancela un pedido desde cualquier estado no terminal."""
+        with self.uow as uow:
+            pedido = _obtener_para_modificar(uow, pedido_id)
+            return _aplicar_transicion(uow, pedido, nuevo)
 
     def crear(self, usuario_id: int, data: PedidoCreate) -> PedidoRead:
         """RN-01: crea el pedido completo o no crea nada.

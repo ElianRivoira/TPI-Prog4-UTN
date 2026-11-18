@@ -2,8 +2,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.deps import CurrentUser
-from app.modules.pedidos.schemas import EstadoPedido, PedidoCreate, PedidoRead, PedidosPaginados
+from app.core.deps import CurrentUser, require_admin
+from app.modules.pedidos.schemas import (
+    CambioEstado,
+    EstadoPedido,
+    PedidoCreate,
+    PedidoRead,
+    PedidosPaginados,
+)
 from app.modules.pedidos.service import (
     PedidoAjeno,
     PedidoNoEncontrado,
@@ -57,3 +63,18 @@ def obtener_pedido(pedido_id: int, usuario: CurrentUser, service: ServiceDep) ->
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PedidoAjeno as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.patch(
+    "/{pedido_id}/estado",
+    response_model=PedidoRead,
+    summary="Avanza o cancela según la máquina de estados (RN-02, RN-03)",
+    dependencies=[Depends(require_admin)],
+)
+def cambiar_estado(pedido_id: int, data: CambioEstado, service: ServiceDep) -> PedidoRead:
+    try:
+        return service.cambiar_estado(pedido_id, data.estado)
+    except PedidoNoEncontrado as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ReglaDeNegocio as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
