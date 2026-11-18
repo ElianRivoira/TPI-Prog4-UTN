@@ -6,6 +6,9 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
+# Nombre de la cookie HttpOnly que transporta el JWT
+ACCESS_TOKEN_COOKIE = "access_token"
+
 # bcrypt: hash lento y con sal aleatoria. passlib 1.7.4 requiere bcrypt==4.0.1.
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
