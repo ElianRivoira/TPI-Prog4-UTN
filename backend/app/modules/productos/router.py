@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.deps import require_admin
 from app.modules.categorias.service import CategoriaNoEncontrada
 from app.modules.productos.schemas import (
     ProductoCreate,
@@ -50,6 +51,7 @@ def obtener_producto(producto_id: int, service: ServiceDep) -> ProductoRead:
     response_model=ProductoRead,
     status_code=status.HTTP_201_CREATED,
     summary="Crea un producto en una categoría activa",
+    dependencies=[Depends(require_admin)],
 )
 def crear_producto(data: ProductoCreate, service: ServiceDep) -> ProductoRead:
     try:
@@ -58,7 +60,12 @@ def crear_producto(data: ProductoCreate, service: ServiceDep) -> ProductoRead:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.put("/{producto_id}", response_model=ProductoRead, summary="Actualiza los campos enviados")
+@router.put(
+    "/{producto_id}",
+    response_model=ProductoRead,
+    summary="Actualiza los campos enviados",
+    dependencies=[Depends(require_admin)],
+)
 def actualizar_producto(producto_id: int, data: ProductoUpdate, service: ServiceDep) -> ProductoRead:
     try:
         return service.actualizar(producto_id, data)
@@ -66,7 +73,12 @@ def actualizar_producto(producto_id: int, data: ProductoUpdate, service: Service
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.patch("/{producto_id}/stock", response_model=ProductoRead, summary="Actualiza stock y disponibilidad")
+@router.patch(
+    "/{producto_id}/stock",
+    response_model=ProductoRead,
+    summary="Actualiza stock y disponibilidad",
+    dependencies=[Depends(require_admin)],
+)
 def actualizar_stock(
     producto_id: int, data: ProductoStockUpdate, service: ServiceDep
 ) -> ProductoRead:
@@ -80,6 +92,7 @@ def actualizar_stock(
     "/{producto_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Baja lógica de un producto",
+    dependencies=[Depends(require_admin)],
 )
 def eliminar_producto(producto_id: int, service: ServiceDep) -> None:
     try:
