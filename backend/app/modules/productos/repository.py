@@ -40,6 +40,23 @@ class ProductoRepository(BaseRepository[Producto]):
         )
         return list(self.session.exec(consulta).all()), total
 
+    def lock_by_ids(self, producto_ids: list[int]) -> None:
+        """Bloquea las filas de esos productos hasta el fin de la transacción (SELECT ... FOR UPDATE).
+
+        Así dos pedidos simultáneos no pueden leer el mismo stock y vender de más. Se bloquean en
+        orden de id para que dos transacciones no se esperen mutuamente (deadlock). Los objetos
+        quedan en la sesión: los get_by_id siguientes no vuelven a consultar la base.
+        """
+        if not producto_ids:
+            return
+        consulta = (
+            select(Producto)
+            .where(col(Producto.id).in_(producto_ids))
+            .order_by(Producto.id)
+            .with_for_update()
+        )
+        self.session.exec(consulta).all()
+
     def get_by_nombre(self, nombre: str) -> Producto | None:
         """Busca por nombre exacto. Lo usa el seed para no duplicar productos."""
         return self.session.exec(select(Producto).where(Producto.nombre == nombre)).first()
