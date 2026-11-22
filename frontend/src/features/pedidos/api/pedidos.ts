@@ -1,6 +1,7 @@
 import { api } from '@/shared/api/axiosInstance';
 
 import type {
+  EstadoPedido,
   FiltrosPedidos,
   Pedido,
   PedidoCreate,
@@ -32,6 +33,15 @@ export async function obtenerPedido(id: number): Promise<Pedido> {
 /** GET /pedidos/resumen: cantidad de pedidos por estado, pedidos de hoy e ingresos (solo admin). */
 export async function obtenerResumen(): Promise<ResumenPedidos> {
   const { data } = await api.get<ResumenPedidos>('/pedidos/resumen');
+  return data;
+}
+
+/**
+ * PATCH /pedidos/{id}/estado (admin): avanza o cancela según la máquina de estados (RN-02, RN-03).
+ * 400 si la transición no es válida; al cancelar, el backend restituye el stock.
+ */
+export async function cambiarEstadoPedido(id: number, estado: EstadoPedido): Promise<Pedido> {
+  const { data } = await api.patch<Pedido>(`/pedidos/${id}/estado`, { estado });
   return data;
 }
 

@@ -3,13 +3,14 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { productosKeys } from '@/features/productos/hooks/useProductos';
 
 import {
+  cambiarEstadoPedido,
   cancelarPedido,
   crearPedido,
   listarPedidos,
   obtenerPedido,
   obtenerResumen,
 } from '../api/pedidos';
-import type { FiltrosPedidos, Pedido, PedidoCreate } from '../types/pedido.types';
+import type { EstadoPedido, FiltrosPedidos, Pedido, PedidoCreate } from '../types/pedido.types';
 
 // Todas cuelgan de ['pedidos']: invalidar `todos` refresca listas, detalles y el resumen
 export const pedidosKeys = {
@@ -68,6 +69,15 @@ export function useCancelarPedido() {
   const invalidar = useInvalidarPedidosYStock();
   return useMutation({
     mutationFn: (id: number) => cancelarPedido(id),
+    onSettled: invalidar,
+  });
+}
+
+/** Cambio de estado por el admin. Cancelar restituye stock: se invalidan pedidos, resumen y productos. */
+export function useCambiarEstadoPedido() {
+  const invalidar = useInvalidarPedidosYStock();
+  return useMutation({
+    mutationFn: ({ id, estado }: { id: number; estado: EstadoPedido }) => cambiarEstadoPedido(id, estado),
     onSettled: invalidar,
   });
 }
