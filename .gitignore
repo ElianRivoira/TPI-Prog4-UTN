@@ -16,6 +16,7 @@ venv/
 # Node / Vite
 node_modules/
 dist/
+.vite/
 *.tsbuildinfo
 
 # Editores y sistema operativo

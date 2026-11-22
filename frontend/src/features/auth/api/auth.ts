@@ -1,6 +1,12 @@
 import { api } from '@/shared/api/axiosInstance';
 
-import type { Usuario } from '../types/auth.types';
+import type { RegistroInput, Usuario } from '../types/auth.types';
+
+/** POST /auth/register: crea un usuario con rol user. 409 si el username o el email ya existen. */
+export async function registrarUsuario(datos: RegistroInput): Promise<Usuario> {
+  const { data } = await api.post<Usuario>('/auth/register', datos);
+  return data;
+}
 
 /**
  * POST /auth/token. El backend espera un formulario OAuth2 (no JSON) y responde con la cookie
