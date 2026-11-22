@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { cerrarSesion, iniciarSesion, obtenerUsuarioActual } from '@/features/auth/api/auth';
 import type { Rol, Usuario } from '@/features/auth/types/auth.types';
+import { onSesionPerdida } from '@/shared/api/axiosInstance';
 import { queryClient } from '@/shared/api/queryClient';
 
 interface AuthState {
@@ -69,3 +70,8 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
+
+// Interceptor de Axios: ante 401 o «Cuenta de usuario desactivada», la sesión del cliente se limpia
+onSesionPerdida(() => {
+  useAuthStore.setState({ usuario: null, cargando: false });
+});
