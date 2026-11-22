@@ -41,6 +41,16 @@ export interface PedidoCreate {
   notas: string | null;
 }
 
+/** ResumenPedidos: indicadores del panel de administración (GET /pedidos/resumen). */
+export interface ResumenPedidos {
+  pendientes: number;
+  en_preparacion: number;
+  entregados: number;
+  cancelados: number;
+  pedidos_hoy: number;
+  ingresos_entregados: number;
+}
+
 /** Parámetros de GET /pedidos. */
 export interface FiltrosPedidos {
   skip: number;
