@@ -10,3 +10,11 @@ export interface Usuario {
   disabled: boolean;
   created_at: string;
 }
+
+/** Cuerpo de POST /auth/register (UserCreate en el backend). */
+export interface RegistroInput {
+  username: string;
+  full_name: string;
+  email: string;
+  password: string;
+}
