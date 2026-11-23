@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 from app.modules.categorias.schemas import CategoriaRead
@@ -12,6 +13,12 @@ class ProductoCreate(SQLModel):
     disponible: bool = True
     categoria_id: int
 
+    @field_validator("nombre", mode="before")
+    @classmethod
+    def quitar_espacios_extremos(cls, value: object) -> object:
+        # mode="before": se recorta antes de validar el largo mínimo
+        return value.strip() if isinstance(value, str) else value
+
 
 class ProductoUpdate(SQLModel):
     """Actualización parcial: solo se modifican los campos enviados con un valor distinto de null."""
@@ -23,6 +30,12 @@ class ProductoUpdate(SQLModel):
     stock: int | None = Field(default=None, ge=0)
     disponible: bool | None = None
     categoria_id: int | None = None
+
+    @field_validator("nombre", mode="before")
+    @classmethod
+    def quitar_espacios_extremos(cls, value: object) -> object:
+        # mode="before": se recorta antes de validar el largo mínimo
+        return value.strip() if isinstance(value, str) else value
 
 
 class ProductoStockUpdate(SQLModel):
