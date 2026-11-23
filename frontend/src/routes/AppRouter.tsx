@@ -1,21 +1,37 @@
+import { lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { RegisterPage } from '@/features/auth/pages/RegisterPage';
 import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
-import { AdminCategoriasPage } from '@/features/categorias/pages/AdminCategoriasPage';
-import { AdminPedidosPage } from '@/features/pedidos/pages/AdminPedidosPage';
-import { AdminResumenPage } from '@/features/pedidos/pages/AdminResumenPage';
 import { CarritoPage } from '@/features/pedidos/pages/CarritoPage';
 import { CheckoutPage } from '@/features/pedidos/pages/CheckoutPage';
 import { MisPedidosPage } from '@/features/pedidos/pages/MisPedidosPage';
-import { AdminProductosPage } from '@/features/productos/pages/AdminProductosPage';
 import { CatalogoPage } from '@/features/productos/pages/CatalogoPage';
-import { AdminUsuariosPage } from '@/features/usuarios/pages/AdminUsuariosPage';
 import { AdminLayout } from '@/shared/layout/AdminLayout';
 import { MainLayout } from '@/shared/layout/MainLayout';
 
 import { ProtectedRoute } from './ProtectedRoute';
+
+// El panel de administración se carga recién cuando un admin entra a él: el cliente no descarga
+// esas pantallas ni TanStack Table. AdminLayout muestra un indicador mientras llegan.
+const AdminResumenPage = lazy(() =>
+  import('@/features/pedidos/pages/AdminResumenPage').then((m) => ({ default: m.AdminResumenPage })),
+);
+const AdminPedidosPage = lazy(() =>
+  import('@/features/pedidos/pages/AdminPedidosPage').then((m) => ({ default: m.AdminPedidosPage })),
+);
+const AdminProductosPage = lazy(() =>
+  import('@/features/productos/pages/AdminProductosPage').then((m) => ({ default: m.AdminProductosPage })),
+);
+const AdminCategoriasPage = lazy(() =>
+  import('@/features/categorias/pages/AdminCategoriasPage').then((m) => ({
+    default: m.AdminCategoriasPage,
+  })),
+);
+const AdminUsuariosPage = lazy(() =>
+  import('@/features/usuarios/pages/AdminUsuariosPage').then((m) => ({ default: m.AdminUsuariosPage })),
+);
 
 export function AppRouter() {
   return (
