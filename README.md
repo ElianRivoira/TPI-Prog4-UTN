@@ -6,6 +6,8 @@ Aplicación web para un negocio de comidas: los clientes recorren el catálogo, 
 
 **Repositorio:** https://github.com/ElianRivoira/TPI-Prog4-UTN
 
+**Video de demostración:** https://youtu.be/5D6yxeFFa_U
+
 ## Stack
 
 | Parte | Tecnologías |
