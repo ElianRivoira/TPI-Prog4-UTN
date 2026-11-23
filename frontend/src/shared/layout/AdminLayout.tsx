@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { cn } from '../ui/cn';
@@ -32,7 +33,16 @@ export function AdminLayout() {
           </NavLink>
         ))}
       </nav>
-      <Outlet />
+      {/* Las pantallas del panel se cargan con lazy (ver AppRouter) */}
+      <Suspense
+        fallback={
+          <div role="status" className="flex justify-center py-16 text-sm text-slate-500">
+            Cargando...
+          </div>
+        }
+      >
+        <Outlet />
+      </Suspense>
     </div>
   );
 }
