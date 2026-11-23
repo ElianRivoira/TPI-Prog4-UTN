@@ -62,7 +62,7 @@ El backend se organiza por módulos de dominio, cada uno con su cadena Router �
 
 ### Instalación y ejecución
 
-Todos los comandos se ejecutan dentro de `backend/`. Si hay varias versiones de Python instaladas, crear el entorno virtual con una de 3.11 a 3.13 (en Windows: `py -3.13 -m venv .venv`).
+Todos los comandos se ejecutan dentro de `backend/`. Si hay varias versiones de Python instaladas, crear el entorno virtual con una de 3.11 a 3.13 llamándola por su ruta o, si está el lanzador de Windows, con `py -3.13 -m venv .venv`.
 
 ```bash
 cd backend
@@ -72,13 +72,14 @@ docker compose up -d
 
 # 2. Entorno virtual y dependencias
 python -m venv .venv
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux / macOS
+.venv\Scripts\activate                # Windows (cmd o PowerShell)
+# source .venv/Scripts/activate       # Windows (Git Bash)
+# source .venv/bin/activate           # Linux / macOS
 pip install -r requirements.txt
 
 # 3. Variables de entorno
-copy .env.example .env          # Windows
-# cp .env.example .env          # Linux / macOS
+copy .env.example .env                # Windows (cmd o PowerShell)
+# cp .env.example .env                # Linux / macOS / Git Bash
 
 # 4. Datos iniciales (admin, categorías y productos); se puede correr varias veces
 python -m app.db.seed
@@ -149,8 +150,8 @@ cd frontend
 pnpm install
 
 # 2. Variables de entorno
-copy .env.example .env          # Windows
-# cp .env.example .env          # Linux / macOS
+copy .env.example .env                # Windows (cmd o PowerShell)
+# cp .env.example .env                # Linux / macOS / Git Bash
 
 # 3. Servidor de desarrollo
 pnpm dev
