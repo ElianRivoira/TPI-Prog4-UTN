@@ -6,35 +6,63 @@ Aplicación web para un negocio de comidas: los clientes recorren el catálogo, 
 
 **Repositorio:** https://github.com/ElianRivoira/TPI-Prog4-UTN
 
-> En desarrollo. Las instrucciones de instalación y ejecución se completan a medida que avanza el proyecto.
-
 ## Stack
 
 | Parte | Tecnologías |
 |---|---|
 | Backend | Python 3.11 a 3.13, FastAPI, SQLModel, PostgreSQL, JWT en cookie HttpOnly |
-| Frontend | React + TypeScript, Vite, Tailwind CSS, TanStack Query / Form / Table, Zustand, Axios |
+| Frontend | React 19 + TypeScript (strict), Vite 7, Tailwind CSS 4, TanStack Query / Form / Table, Zustand, Axios, React Router 7 |
+
+## Requisitos
+
+| Herramienta | Versión | Para qué |
+|---|---|---|
+| Python | **3.11 a 3.13** (SQLModel no funciona con 3.14) | Backend |
+| PostgreSQL | 15 o superior, o **Docker** para levantarlo con el `docker-compose.yml` incluido | Base de datos |
+| Node.js | 20.19 o superior | Frontend |
+| pnpm | 9 o superior (`npm install -g pnpm`) | Frontend |
+
+## Puesta en marcha
+
+El backend y el frontend son dos proyectos independientes y se ejecutan en **dos terminales**. Primero el backend:
+
+1. [Backend](#backend): base de datos, dependencias, `.env`, seed y `uvicorn` (queda en `http://localhost:8000`).
+2. [Frontend](#frontend): dependencias, `.env` y `pnpm dev` (queda en `http://localhost:5173`).
+3. Abrir `http://localhost:5173` e iniciar sesión con el [usuario administrador del seed](#usuario-administrador-del-seed) o registrar un cliente.
 
 ## Estructura del repositorio
 
 ```
 .
-├── backend/    API REST (FastAPI + SQLModel) bajo /api/v1
-└── frontend/   Aplicación React + TypeScript
+├── backend/
+│   ├── app/
+│   │   ├── main.py            App FastAPI, CORS con credenciales y prefijo /api/v1
+│   │   ├── core/              Configuración, base de datos, seguridad, dependencias,
+│   │   │                      UnitOfWork base y BaseRepository[T]
+│   │   ├── modules/           Un paquete por dominio: auth, usuarios, categorias,
+│   │   │                      productos y pedidos
+│   │   └── db/seed.py         Carga idempotente de admin, categorías y productos
+│   ├── requirements.txt
+│   ├── docker-compose.yml     PostgreSQL local (opcional)
+│   └── .env.example
+└── frontend/
+    ├── src/
+    │   ├── features/          auth, categorias, productos, pedidos y usuarios
+    │   │                      (cada una con pages, components, hooks, api y types)
+    │   ├── shared/            Axios, queryClient, componentes UI y layouts
+    │   ├── store/             authStore y cartStore (Zustand con persist)
+    │   └── routes/            AppRouter y ProtectedRoute
+    ├── package.json
+    └── .env.example
 ```
 
-El backend se organiza por módulos de dominio (`usuarios`, `auth`, `categorias`, `productos`, `pedidos`), cada uno con su cadena Router → Service → Unit of Work → Repository → Model. El frontend se organiza por features que espejan esos módulos.
+El backend se organiza por módulos de dominio, cada uno con su cadena Router → Service → Unit of Work → Repository → Model. El commit ocurre solo en el `__exit__` del Unit of Work: ningún Service ni Router llama a `session.commit()`. El frontend se organiza por features que espejan esos módulos.
 
 ## Backend
 
-### Requisitos
-
-- Python **3.11 a 3.13** (SQLModel no funciona con 3.14).
-- PostgreSQL 15 o superior. Si no está instalado, se puede levantar con Docker (incluido en el proyecto).
-
 ### Instalación y ejecución
 
-Todos los comandos se ejecutan dentro de `backend/`.
+Todos los comandos se ejecutan dentro de `backend/`. Si hay varias versiones de Python instaladas, crear el entorno virtual con una de 3.11 a 3.13 (en Windows: `py -3.13 -m venv .venv`).
 
 ```bash
 cd backend
@@ -59,7 +87,9 @@ python -m app.db.seed
 uvicorn app.main:app --reload
 ```
 
-La API queda en `http://localhost:8000/api/v1`, con la documentación en [`/docs`](http://localhost:8000/docs) y [`/redoc`](http://localhost:8000/redoc).
+La API queda en `http://localhost:8000/api/v1`, con la documentación en [`/docs`](http://localhost:8000/docs) y [`/redoc`](http://localhost:8000/redoc). Las tablas se crean solas al iniciar el servidor o al correr el seed.
+
+En PowerShell, si `activate` falla por la política de ejecución de scripts, habilitarla solo para la terminal actual con `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` y volver a activar.
 
 ### Variables de entorno (`backend/.env`)
 
@@ -105,3 +135,68 @@ La sesión viaja en una cookie HttpOnly, no en un encabezado. Para usar las ruta
 - **RN-06:** `forma_pago` es `EFECTIVO` o `TRANSFERENCIA`; `direccion_entrega` tiene entre 5 y 200 caracteres.
 
 Al crear o cancelar un pedido se bloquean las filas de los productos afectados (`SELECT … FOR UPDATE`), así dos pedidos simultáneos no venden más stock del que hay.
+
+## Frontend
+
+### Instalación y ejecución
+
+Con el backend corriendo, en otra terminal y dentro de `frontend/`:
+
+```bash
+cd frontend
+
+# 1. Dependencias
+pnpm install
+
+# 2. Variables de entorno
+copy .env.example .env          # Windows
+# cp .env.example .env          # Linux / macOS
+
+# 3. Servidor de desarrollo
+pnpm dev
+```
+
+La aplicación queda en `http://localhost:5173`. `pnpm build` verifica los tipos (TypeScript en modo `strict`) y genera la versión de producción en `dist/`.
+
+El puerto 5173 es fijo porque es el origen que el backend autoriza en CORS (`FRONTEND_ORIGIN`). Si está ocupado, `pnpm dev` termina con un error en lugar de usar otro puerto: hay que liberarlo, o cambiar el puerto en `vite.config.ts` y `FRONTEND_ORIGIN` en `backend/.env`.
+
+### Variables de entorno (`frontend/.env`)
+
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `VITE_API_URL` | URL base de la API, con el prefijo `/api/v1`. | `http://localhost:8000/api/v1` |
+
+### Pantallas
+
+| Ruta | Pantalla | Acceso |
+|---|---|---|
+| `/` | Catálogo paginado en el servidor, con búsqueda, filtro por categoría y «Agregar al carrito» | Público |
+| `/login`, `/register` | Inicio de sesión y registro | Público |
+| `/carrito` | Carrito con cantidades, subtotales y total; se conserva al recargar | Público |
+| `/checkout` | Confirmar el pedido con dirección, forma de pago y notas | Sesión |
+| `/mis-pedidos` | Pedidos propios con detalle y cancelación en `PENDIENTE` | Sesión |
+| `/admin/resumen` | Tarjetas con los indicadores del negocio | admin |
+| `/admin/pedidos` | Pedidos con filtro por estado y botones para avanzar o cancelar | admin |
+| `/admin/productos` | ABM de productos con cambio de stock y disponibilidad | admin |
+| `/admin/categorias` | ABM de categorías | admin |
+| `/admin/usuarios` | Usuarios con activar y desactivar | admin |
+| `/unauthorized` | Sin permiso | Público |
+
+Sin sesión, las rutas protegidas redirigen a `/login`; con una sesión sin el rol necesario, a `/unauthorized`.
+
+### Sesión y estado
+
+- La sesión viaja en la cookie HttpOnly `access_token`: el frontend nunca lee ni guarda el token. Axios envía la cookie con `withCredentials: true`.
+- `authStore` (Zustand con `persist`) guarda solo los datos del usuario. Al abrir la aplicación, `checkSession` confirma la sesión con `GET /auth/me`.
+- `cartStore` (Zustand con `persist`) guarda el carrito en el navegador.
+- Un interceptor de Axios limpia la sesión ante un 401, o ante un 400 por cuenta desactivada.
+- Los datos del servidor (catálogo, pedidos, usuarios y resumen) se obtienen con TanStack Query, que vuelve a pedirlos después de cada cambio.
+
+## Problemas frecuentes
+
+| Síntoma | Causa y solución |
+|---|---|
+| Errores al instalar las dependencias o al iniciar el servidor con Python 3.14 | SQLModel no soporta 3.14. Crear el entorno virtual con Python 3.11 a 3.13. |
+| `ModuleNotFoundError: No module named 'psycopg'` | `DATABASE_URL` empieza con `postgresql://`. Usar `postgresql+psycopg2://`, como en `.env.example`. |
+| `docker compose up -d` falla porque el puerto 5432 está en uso | Ya hay un PostgreSQL corriendo. Crear en él la base `foodstore_db` y ajustar usuario y contraseña en `DATABASE_URL`, o detener ese servicio. |
+| El login responde bien pero la aplicación vuelve a pedir sesión, o el navegador muestra un error de CORS | El frontend no corre en el origen de `FRONTEND_ORIGIN` (`http://localhost:5173`), o `VITE_API_URL` no apunta al backend. Abrir la aplicación desde `http://localhost:5173`, no desde `127.0.0.1`. |
